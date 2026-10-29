@@ -131,6 +131,9 @@
           <!-- Closed voting -->
           <template v-else>
             <div class="notification is-danger is-light mb-4" role="alert" v-if="closedWhileVoting">
+              <router-link class="button is-primary is-fullwidth mb-3" v-if="nextOpenVoting" :to="{ query: { voting: nextOpenVoting.id } }">
+                {{ nextOpenVoting.title }} is open now
+              </router-link>
               <div class="voting-notification-head"><font-awesome-icon icon="exclamation-triangle" /><span>This voting is closed</span></div>
               <p>The voting closed at {{ voting.closed_at | datetime }}. Your vote was not counted.</p>
             </div>
@@ -147,7 +150,7 @@
             </template>
             <p v-else-if="!voting.published">The Juridical Commission publishes the result after the voting closes. It is shown here then.</p>
 
-            <p class="has-text-grey is-size-7 mt-4">The next voting appears on this page by itself. You do not need to reload.</p>
+            <p class="has-text-grey is-size-7 mt-4" v-if="!closedWhileVoting">The next voting appears on this page by itself. You do not need to reload.</p>
           </template>
         </div>
 
@@ -185,6 +188,7 @@ import {
   describeAllowance,
   explainRefusal,
   noVotesLeftNotice,
+  openVotingWithoutVote,
   pickVoting,
   resultTag,
   statusTag,
@@ -256,6 +260,9 @@ export default {
     },
     allowance () {
       return describeAllowance(this.myVote, this.bodyName)
+    },
+    nextOpenVoting () {
+      return openVotingWithoutVote(this.votings, this.votedIds)
     },
     noVotesLeft () {
       return noVotesLeftNotice(this.myVote, this.bodyName)

@@ -232,13 +232,18 @@ export function bodyProgressStatus (body) {
 // the delegate sees a voting from the moment it opens.
 export const delegateVotings = (votings) => votings.filter((voting) => voting.status !== 'scheduled')
 
+// The first open voting in which the delegate did not vote yet, or null.
+export function openVotingWithoutVote (votings, votedIds) {
+  return votings.find((voting) => voting.status === 'open' && !votedIds.includes(voting.id)) || null
+}
+
 // The voting to show when the delegate did not choose one: the first open voting
 // in which the delegate did not vote yet, else the first open one, else the last closed one.
 export function pickVoting (votings, votedIds) {
-  const open = votings.filter((voting) => voting.status === 'open')
-  const notVoted = open.find((voting) => !votedIds.includes(voting.id))
+  const notVoted = openVotingWithoutVote(votings, votedIds)
   if (notVoted) return notVoted.id
-  if (open.length > 0) return open[0].id
+  const open = votings.find((voting) => voting.status === 'open')
+  if (open) return open.id
   return votings.length > 0 ? votings[votings.length - 1].id : null
 }
 

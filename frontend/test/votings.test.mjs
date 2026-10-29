@@ -10,6 +10,7 @@ import {
   explainMajority,
   explainRefusal,
   noVotesLeftNotice,
+  openVotingWithoutVote,
   pickVoting,
   resultTag,
   statusTag,
@@ -213,6 +214,13 @@ describe('choosing the voting of the delegate', () => {
   it('stays on an open voting without a vote, and moves on after the vote', () => {
     assert.equal(autoSwitchTarget([openA, openB], [], openA, false), null)
     assert.equal(autoSwitchTarget([openA, openB], [2], openA, false), 3)
+  })
+
+  it('points to the open voting in which the delegate did not vote yet', () => {
+    const closedA = { ...openA, status: 'closed' }
+    assert.equal(openVotingWithoutVote([closedA, openB], []), openB)
+    assert.equal(openVotingWithoutVote([closedA, openB], [3]), null)
+    assert.equal(openVotingWithoutVote([closedA, scheduled], []), null)
   })
 
   it('shows a voting when none is shown yet', () => {
