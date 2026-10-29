@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import {
   autoSwitchTarget,
+  closedWithUnsentVote,
   bodyProgressStatus,
   delegateVotings,
   describeAllowance,
@@ -217,5 +218,22 @@ describe('choosing the voting of the delegate', () => {
   it('shows a voting when none is shown yet', () => {
     assert.equal(autoSwitchTarget([openA], [], null, false), 2)
     assert.equal(autoSwitchTarget([], [], null, false), null)
+  })
+})
+
+describe('closedWithUnsentVote', () => {
+  it('says a vote was lost when the delegate was checking it or had chosen votes', () => {
+    assert.equal(closedWithUnsentVote(myVote(), 'confirm', 2), true)
+    assert.equal(closedWithUnsentVote(myVote(), 'form', 1), true)
+  })
+
+  it('says nothing when the delegate had chosen nothing', () => {
+    assert.equal(closedWithUnsentVote(myVote(), 'form', 0), false)
+    assert.equal(closedWithUnsentVote(null, 'form', 0), false)
+  })
+
+  it('says nothing when the delegate voted before the voting closed', () => {
+    const voted = myVote({ own: { in_favour: 2, submitted_at: '2026-10-29T13:59:00Z' } })
+    assert.equal(closedWithUnsentVote(voted, 'form', 2), false)
   })
 })

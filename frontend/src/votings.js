@@ -253,3 +253,10 @@ export function autoSwitchTarget (votings, votedIds, current, holding) {
   if (current && current.status === 'open' && !votedIds.includes(current.id)) return null
   return pick
 }
+
+// Whether a voting that just closed took a vote of the delegate with it: the delegate was checking
+// a vote or had chosen votes, and has no recorded vote. Only then the page says "Your vote was not counted".
+export function closedWithUnsentVote (myVote, phase, used) {
+  if (myVote && myVote.submitted_at) return false
+  return phase !== 'form' || used > 0
+}

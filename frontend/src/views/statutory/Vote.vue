@@ -180,6 +180,7 @@ import {
   KIND_NAMES,
   MAJORITY_NAMES,
   autoSwitchTarget,
+  closedWithUnsentVote,
   delegateVotings,
   describeAllowance,
   explainRefusal,
@@ -369,7 +370,7 @@ export default {
       }
 
       const justClosed = previous && previous.status === 'open' && this.voting && this.voting.status === 'closed' && this.phase !== 'sending'
-      if (justClosed && (this.phase !== 'form' || this.used > 0)) {
+      if (justClosed && closedWithUnsentVote(this.myVote, this.phase, this.used)) {
         this.closedWhileVoting = true
       }
 
@@ -413,6 +414,7 @@ export default {
         if (!this.isCurrent(ticket)) return
         this.myVote = response.data.data
         this.refusal = null
+        this.counts = emptyCounts()
         this.phase = 'form'
         return
       } catch (err) {
@@ -465,6 +467,7 @@ export default {
 
       if (outcome.kind === 'recorded' || outcome.kind === 'already_voted') {
         this.alreadyVoted = outcome.kind === 'already_voted'
+        this.counts = emptyCounts()
         this.markVoted(ticket.votingId)
         return
       }
