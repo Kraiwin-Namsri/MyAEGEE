@@ -131,7 +131,7 @@
           <!-- Closed voting -->
           <template v-else>
             <div class="notification is-danger is-light mb-4" role="alert" v-if="closedWhileVoting">
-              <router-link class="button is-primary is-fullwidth mb-3" v-if="nextOpenVoting" :to="{ query: { voting: nextOpenVoting.id } }">
+              <router-link class="button is-primary is-fullwidth mb-3 voting-next-button" v-if="nextOpenVoting" :to="{ query: { voting: nextOpenVoting.id } }">
                 {{ nextOpenVoting.title }} is open now
               </router-link>
               <div class="voting-notification-head"><font-awesome-icon icon="exclamation-triangle" /><span>This voting is closed</span></div>
@@ -235,7 +235,10 @@ export default {
       departed: false,
       closedWhileVoting: false,
       alreadyVoted: false,
-      votedIds: [],
+      // Votings that are done for this delegate: voted, or no votes in them.
+      doneIds: [],
+      // Open votings for which the page asked the own vote once (see learnOpenVotings).
+      checkedIds: [],
       resultData: null,
       phase: 'form',
       counts: emptyCounts(),
@@ -262,7 +265,7 @@ export default {
       return describeAllowance(this.myVote, this.bodyName)
     },
     nextOpenVoting () {
-      return openVotingWithoutVote(this.votings, this.votedIds)
+      return openVotingWithoutVote(this.votings, this.doneIds)
     },
     noVotesLeft () {
       return noVotesLeftNotice(this.myVote, this.bodyName)
@@ -300,7 +303,7 @@ export default {
       return resultTag(voting) || statusTag(voting)
     },
     pickVoting () {
-      return pickVoting(this.votings, this.votedIds)
+      return pickVoting(this.votings, this.doneIds)
     },
     // Every read or write of the own vote takes a new number. An answer that arrives
     // after a newer request, or after the delegate chose another voting, is dropped.
@@ -311,8 +314,24 @@ export default {
     isCurrent ({ request, votingId }) {
       return request === this.myVoteRequest && votingId === this.selectedId
     },
-    markVoted (votingId) {
-      if (!this.votedIds.includes(votingId)) this.votedIds.push(votingId)
+    markDone (votingId) {
+      if (!this.doneIds.includes(votingId)) this.doneIds.push(votingId)
+    },
+    // The page only knows the own vote of the votings it loaded. For every other open voting it asks once
+    // whether the delegate already voted there (for example on another device) or has no votes in it,
+    // so it never sends the delegate to a voting that is done for them.
+    async learnOpenVotings () {
+      const unknown = this.votings.filter((voting) => voting.status === 'open' && !this.checkedIds.includes(voting.id))
+      await Promise.all(unknown.map(async (voting) => {
+        try {
+          const response = await this.axios.get(this.votingsUrl + '/' + voting.id + '/my-vote')
+          if (response.data.data.submitted_at) this.markDone(voting.id)
+        } catch (err) {
+          if (!err.response) return // No connection: the next refresh asks again.
+          if (err.response.status === 403) this.markDone(voting.id)
+        }
+        if (!this.checkedIds.includes(voting.id)) this.checkedIds.push(voting.id)
+      }))
     },
     async select (votingId) {
       if (!this.votings.some((voting) => voting.id === votingId)) {
@@ -341,7 +360,7 @@ export default {
         const response = await this.axios.get(this.votingsUrl + '/' + ticket.votingId + '/my-vote')
         if (!this.isCurrent(ticket)) return
         this.myVote = response.data.data
-        if (this.myVote.submitted_at) this.markVoted(ticket.votingId)
+        if (this.myVote.submitted_at) this.markDone(ticket.votingId)
       } catch (err) {
         if (!this.isCurrent(ticket)) return
         if (err.response && err.response.status === 403) {
@@ -375,6 +394,7 @@ export default {
       } catch (err) {
         return // A lost connection shows up when the delegate votes; the next refresh tries again.
       }
+      await this.learnOpenVotings()
 
       const justClosed = previous && previous.status === 'open' && this.voting && this.voting.status === 'closed' && this.phase !== 'sending'
       if (justClosed && closedWithUnsentVote(this.myVote, this.phase, this.used)) {
@@ -383,7 +403,7 @@ export default {
 
       if (!this.chosenByUser || !this.voting) {
         const holding = this.phase !== 'form' || this.closedWhileVoting
-        const target = autoSwitchTarget(this.votings, this.votedIds, this.voting, holding)
+        const target = autoSwitchTarget(this.votings, this.doneIds, this.voting, holding)
         if (target !== null) {
           await this.select(target)
           return
@@ -417,7 +437,7 @@ export default {
       const ticket = this.startMyVoteRequest()
       try {
         const response = await this.axios.put(this.votingsUrl + '/' + ticket.votingId + '/my-vote', sent)
-        this.markVoted(ticket.votingId)
+        this.markDone(ticket.votingId)
         if (!this.isCurrent(ticket)) return
         this.myVote = response.data.data
         this.refusal = null
@@ -475,7 +495,7 @@ export default {
       if (outcome.kind === 'recorded' || outcome.kind === 'already_voted') {
         this.alreadyVoted = outcome.kind === 'already_voted'
         this.counts = emptyCounts()
-        this.markVoted(ticket.votingId)
+        this.markDone(ticket.votingId)
         return
       }
 
@@ -507,6 +527,7 @@ export default {
         this.axios.get(this.services['core'] + '/bodies/')
       ])
       this.bodies = Object.fromEntries(bodiesResponse.data.data.map((body) => [body.id, body]))
+      await this.learnOpenVotings()
 
       if (this.$route.query.voting) {
         this.chosenByUser = true

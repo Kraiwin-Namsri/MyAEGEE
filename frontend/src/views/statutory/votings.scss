@@ -235,6 +235,13 @@ $voting-tablet: 769px;
   z-index: 5;
 }
 
+// The link to the next open voting can hold a long title: it wraps instead of overflowing.
+.voting-next-button {
+  white-space: normal;
+  height: auto;
+  min-height: 2.5em;
+}
+
 .voting-confirm-buttons {
   flex-wrap: nowrap;
 
