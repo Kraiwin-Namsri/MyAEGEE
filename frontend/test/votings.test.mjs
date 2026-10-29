@@ -10,6 +10,7 @@ import {
   explainMajority,
   explainRefusal,
   noVotesLeftNotice,
+  myVoteState,
   openVotingWithoutVote,
   pickVoting,
   resultTag,
@@ -226,6 +227,23 @@ describe('choosing the voting of the delegate', () => {
   it('shows a voting when none is shown yet', () => {
     assert.equal(autoSwitchTarget([openA], [], null, false), 2)
     assert.equal(autoSwitchTarget([], [], null, false), null)
+  })
+})
+
+describe('myVoteState', () => {
+  it('is done when the delegate voted, or has no votes in the voting', () => {
+    assert.equal(myVoteState({ submitted_at: '2026-10-29T14:02:00Z' }, null), 'done')
+    assert.equal(myVoteState(null, 403), 'done')
+  })
+
+  it('is open when the delegate can still vote', () => {
+    assert.equal(myVoteState({ submitted_at: null }, null), 'open')
+  })
+
+  it('is unknown without an answer, so the page asks again later', () => {
+    assert.equal(myVoteState(null, null), 'unknown')
+    assert.equal(myVoteState(null, 500), 'unknown')
+    assert.equal(myVoteState(null, 404), 'unknown')
   })
 })
 

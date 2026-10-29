@@ -237,6 +237,15 @@ export function openVotingWithoutVote (votings, votedIds) {
   return votings.find((voting) => voting.status === 'open' && !votedIds.includes(voting.id)) || null
 }
 
+// What one answer of GET my-vote says about a voting for the delegate: 'done' when the delegate
+// voted there or has no votes in it (403), 'open' when the delegate can still vote, and 'unknown'
+// when there is no answer (no connection or another error), so the page asks again later.
+export function myVoteState (myVote, errorStatus) {
+  if (myVote) return myVote.submitted_at ? 'done' : 'open'
+  if (errorStatus === 403) return 'done'
+  return 'unknown'
+}
+
 // The voting to show when the delegate did not choose one: the first open voting
 // in which the delegate did not vote yet, else the first open one, else the last closed one.
 export function pickVoting (votings, votedIds) {
