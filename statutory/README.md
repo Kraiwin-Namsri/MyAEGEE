@@ -13,6 +13,7 @@ A voting is one question that the Agora votes on: a proposal or a rollcall.
 The JC (permission `global:manage_juridical:agora`) creates a voting with a fixed time window, `opens_at` and `closes_at`.
 There is no manual opening or closing: the voting is `scheduled` until `opens_at`, `open` until `closes_at`, and then `closed`.
 A job per voting (`lib/cron.js`) moves it on time, and every request that reads a voting moves it too, so a missed job or a restart breaks nothing (`lib/voting_lifecycle.js`).
+This section describes a voting on the Agora; [Pre-Agora Voting](#pre-agora-voting) gives what is different for a voting before the Agora.
 
 - At `opens_at` the voting takes a snapshot: one row per body in `voting_body_allotments` with the votes of the body (copied from `votes_per_antenna`), and one row per present delegate (confirmed, registered, not departed, not cancelled) in `voting_delegate_votes`.
 An open voting keeps its snapshot; changes to members lists or delegates count from the next voting.
