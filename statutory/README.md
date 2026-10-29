@@ -56,7 +56,7 @@ Until then, `GET .../:voting_id` for that voting gives an error, and the list of
 When more reasons apply, the first one in that order counts.
 
 A Pre-Agora voting must open at the earliest 14 days and close at the latest 9 days before `events.starts`.
-A voting on the Agora can set `follows_voting_id` to a closed Pre-Agora voting of the same Agora with outcome `to_agora`; `GET .../:voting_id` then shows that voting under `follows`.
+A voting on the Agora can set `follows_voting_id` to a closed Pre-Agora voting of the same Agora with outcome `to_agora`; the client gets the result and outcome of that voting with `GET .../:follows_voting_id`.
 `GET /events/:event_id/votings?phase=pre_agora` lists only the Pre-Agora votings, with their result, quorum and outcome: the overview of the round.
 CHECK constraints on `votings` keep these fields consistent (for example `pre_agora_closed`: a closed Pre-Agora voting is published and has its quorum and outcome).
 

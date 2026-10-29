@@ -130,17 +130,10 @@ exports.listVotings = async (req, res) => {
     });
 };
 
-// A voting on the Agora that follows a Pre-Agora voting shows the result from before the Agora too.
 exports.getVoting = async (req, res) => {
-    const data = formatVoting(req.voting, req.permissions.manage_votings);
-    if (req.voting.follows_voting_id) {
-        const followed = await Voting.findByPk(req.voting.follows_voting_id);
-        data.follows = formatVoting(followed, req.permissions.manage_votings);
-    }
-
     return res.json({
         success: true,
-        data
+        data: formatVoting(req.voting, req.permissions.manage_votings)
     });
 };
 

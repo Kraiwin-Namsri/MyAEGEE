@@ -413,16 +413,21 @@ describe('Votings: Pre-Agora Voting', () => {
             follows_voting_id: followsVotingId
         }));
 
-        test('should link the new voting and show the result from before the Agora', async () => {
+        test('should link the new voting to the Pre-Agora voting and its result', async () => {
             const preAgora = await preAgoraVotingWithOutcome({ in_favour: 1, against: 2 });
 
             const created = await createFollowing(preAgora.id);
             expect(created.statusCode).toEqual(200);
             expect(created.body.data.follows_voting_id).toEqual(preAgora.id);
 
-            const res = await call('GET', '/events/' + event.id + '/votings/' + created.body.data.id);
+            const fetched = await call('GET', '/events/' + event.id + '/votings/' + created.body.data.id);
+            expect(fetched.statusCode).toEqual(200);
+            expect(fetched.body.data.follows_voting_id).toEqual(preAgora.id);
+            expect(fetched.body.data).not.toHaveProperty('follows');
+
+            const res = await call('GET', '/events/' + event.id + '/votings/' + fetched.body.data.follows_voting_id);
             expect(res.statusCode).toEqual(200);
-            expect(res.body.data.follows).toMatchObject({
+            expect(res.body.data).toMatchObject({
                 id: preAgora.id,
                 title: 'Change of the Statutes',
                 result: 'rejected',
