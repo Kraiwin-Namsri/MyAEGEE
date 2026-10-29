@@ -40,7 +40,7 @@ A second trigger, `guard_body_vote_counters`, refuses every other write to the c
 ### Pre-Agora Voting
 
 A voting has a `phase`: `agora` (the default, on the Agora itself) or `pre_agora` (online before the Agora, Working Format of the Agora, Art. 20).
-The phase decides four things; everything else (time window, snapshot, division rule, count) is the same.
+The phase decides four things, plus the limits of the time window below; everything else (opening and closing on time, snapshot, division rule, count) is the same.
 
 - **Electorate**: a Pre-Agora voting takes the delegates of the coming Agora (delegate, accepted, confirmed, not cancelled), not only the delegates who are checked in.
 Nobody is checked in before the Agora, so `registered` and `departed` do not count.
