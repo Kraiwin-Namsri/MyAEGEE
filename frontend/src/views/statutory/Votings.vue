@@ -119,7 +119,7 @@ import { mapGetters } from 'vuex'
 import EditVotingModal from './EditVotingModal.vue'
 import VotingResult from './VotingResult.vue'
 import VotingBodiesTable from './VotingBodiesTable.vue'
-import { KIND_NAMES, MAJORITY_NAMES, resultTag, statusTag } from '../../votings'
+import { KIND_NAMES, MAJORITY_NAMES, bodyProgressStatus, resultTag, statusTag } from '../../votings'
 
 // How often the page asks for the votings and the progress of an open voting.
 const REFRESH_MS = 5000
@@ -184,7 +184,7 @@ export default {
       })
     },
     bodiesComplete () {
-      return this.progress.bodies.filter((body) => body.delegates_voted === body.delegates_count || body.votes_cast >= body.votes_total).length
+      return this.progress.bodies.filter((body) => bodyProgressStatus(body).key === 'complete').length
     },
     delegatesVoted () {
       return this.progress.bodies.reduce((sum, body) => sum + body.delegates_voted, 0)

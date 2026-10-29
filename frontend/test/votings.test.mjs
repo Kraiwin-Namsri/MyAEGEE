@@ -2,10 +2,14 @@ import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
+  autoSwitchTarget,
   bodyProgressStatus,
+  delegateVotings,
   describeAllowance,
   explainMajority,
   explainRefusal,
+  noVotesLeftNotice,
+  pickVoting,
   resultTag,
   statusTag,
   unusedVotesNote
@@ -30,7 +34,7 @@ describe('describeAllowance', () => {
 
     assert.equal(allowance.range, 'You can cast 1 or 2 votes')
     assert.equal(allowance.guaranteedDots, 1)
-    assert.equal(allowance.extraDot, true)
+    assert.equal(allowance.extraFree, true)
     assert.deepEqual(allowance.explanation, [
       'AEGEE-Enschede has 4 votes and 3 delegates. Every delegate has 1 vote.',
       'The 1 extra vote goes to the first delegate who uses it.',
@@ -42,7 +46,7 @@ describe('describeAllowance', () => {
     const allowance = describeAllowance(myVote({ body: { votes_cast: 2 }, own: { votes_available: 1 } }), 'AEGEE-Enschede')
 
     assert.equal(allowance.range, 'You can cast 1 vote')
-    assert.equal(allowance.extraDot, false)
+    assert.equal(allowance.extraFree, false)
     assert.equal(allowance.explanation[2], 'The extra votes of your body are used by other delegates.')
   })
 
@@ -51,14 +55,14 @@ describe('describeAllowance', () => {
 
     assert.equal(allowance.range, 'You can cast 1 to 4 votes')
     assert.equal(allowance.guaranteedDots, 3)
-    assert.equal(allowance.extraDot, true)
+    assert.equal(allowance.extraFree, true)
   })
 
   it('explains a body with one delegate', () => {
     const allowance = describeAllowance(myVote({ body: { votes_total: 3, delegates_count: 1 }, own: { votes_available: 3 } }), 'AEGEE-Leiden')
 
     assert.deepEqual(allowance.explanation, ['AEGEE-Leiden has 3 votes and you are its only delegate, so you have all of them.'])
-    assert.equal(allowance.extraDot, false)
+    assert.equal(allowance.extraFree, false)
   })
 })
 
@@ -158,5 +162,60 @@ describe('tags', () => {
     assert.equal(bodyProgressStatus({ delegates_voted: 1, delegates_count: 3, votes_cast: 4, votes_total: 4 }).key, 'complete')
     assert.equal(bodyProgressStatus({ delegates_voted: 1, delegates_count: 3, votes_cast: 2, votes_total: 4 }).key, 'partly')
     assert.equal(bodyProgressStatus({ delegates_voted: 0, delegates_count: 3, votes_cast: 0, votes_total: 4 }).key, 'none')
+  })
+})
+
+describe('noVotesLeftNotice', () => {
+  it('says nothing while the delegate can vote', () => {
+    assert.equal(noVotesLeftNotice(myVote(), 'AEGEE-Enschede'), null)
+  })
+
+  it('says that the other delegates used all votes of the body', () => {
+    const notice = noVotesLeftNotice(myVote({ body: { votes_cast: 4 }, own: { votes_available: 0 } }), 'AEGEE-Enschede')
+    assert.equal(notice.title, 'Your body has no votes left')
+    assert.equal(notice.line, 'Other delegates of AEGEE-Enschede used all 4 votes of your body.')
+  })
+
+  it('says that a body without votes in the Agora has none, not that they are used', () => {
+    const notice = noVotesLeftNotice(myVote({ body: { votes_total: 0 }, own: { votes_available: 0, max_votes: 0 } }), 'AEGEE-Enschede')
+    assert.equal(notice.title, 'Your body has no votes in this Agora')
+    assert.equal(notice.line, 'AEGEE-Enschede has no votes in this Agora, so you can not vote in this voting.')
+  })
+})
+
+describe('choosing the voting of the delegate', () => {
+  const closed = { id: 1, status: 'closed' }
+  const openA = { id: 2, status: 'open' }
+  const openB = { id: 3, status: 'open' }
+  const scheduled = { id: 4, status: 'scheduled' }
+
+  it('never shows a scheduled voting to the delegate, also not to a JC member', () => {
+    assert.deepEqual(delegateVotings([closed, openA, scheduled]), [closed, openA])
+    assert.equal(pickVoting(delegateVotings([closed, scheduled]), []), 1)
+  })
+
+  it('picks the first open voting without a vote, else the first open one, else the last one', () => {
+    assert.equal(pickVoting([closed, openA, openB], [2]), 3)
+    assert.equal(pickVoting([closed, openA, openB], [2, 3]), 2)
+    assert.equal(pickVoting([closed], []), 1)
+    assert.equal(pickVoting([], []), null)
+  })
+
+  it('moves on from a closed voting to the next open one', () => {
+    assert.equal(autoSwitchTarget([{ ...openA, status: 'closed' }, openB], [], { ...openA, status: 'closed' }, false), 3)
+  })
+
+  it('stays when the delegate holds a vote on a voting that just closed', () => {
+    assert.equal(autoSwitchTarget([{ ...openA, status: 'closed' }, openB], [], { ...openA, status: 'closed' }, true), null)
+  })
+
+  it('stays on an open voting without a vote, and moves on after the vote', () => {
+    assert.equal(autoSwitchTarget([openA, openB], [], openA, false), null)
+    assert.equal(autoSwitchTarget([openA, openB], [2], openA, false), 3)
+  })
+
+  it('shows a voting when none is shown yet', () => {
+    assert.equal(autoSwitchTarget([openA], [], null, false), 2)
+    assert.equal(autoSwitchTarget([], [], null, false), null)
   })
 })

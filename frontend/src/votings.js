@@ -109,9 +109,25 @@ export function describeAllowance (myVote, bodyName) {
     available,
     range,
     guaranteedDots: Math.min(minVotes, available),
-    extraDot: extraFree,
     extraFree,
     explanation
+  }
+}
+
+// Why the delegate can not vote at all, or null when the delegate can still vote.
+// A body without votes in the Agora still has delegates, but they get 0 votes.
+export function noVotesLeftNotice (myVote, bodyName) {
+  if (myVote.votes_available > 0) return null
+
+  if (myVote.body.votes_total === 0) {
+    return {
+      title: 'Your body has no votes in this Agora',
+      line: `${bodyName} has no votes in this Agora, so you can not vote in this voting.`
+    }
+  }
+  return {
+    title: 'Your body has no votes left',
+    line: `Other delegates of ${bodyName} used all ${plural(myVote.body.votes_total, 'vote')} of your body.`
   }
 }
 
@@ -210,4 +226,30 @@ export function bodyProgressStatus (body) {
     return { key: 'partly', label: 'Partly', type: 'is-warning is-light' }
   }
   return { key: 'none', label: 'Not voted', type: '' }
+}
+
+// The votings on the page of the delegate. A scheduled voting is only for the JC to prepare;
+// the delegate sees a voting from the moment it opens.
+export const delegateVotings = (votings) => votings.filter((voting) => voting.status !== 'scheduled')
+
+// The voting to show when the delegate did not choose one: the first open voting
+// in which the delegate did not vote yet, else the first open one, else the last closed one.
+export function pickVoting (votings, votedIds) {
+  const open = votings.filter((voting) => voting.status === 'open')
+  const notVoted = open.find((voting) => !votedIds.includes(voting.id))
+  if (notVoted) return notVoted.id
+  if (open.length > 0) return open[0].id
+  return votings.length > 0 ? votings[votings.length - 1].id : null
+}
+
+// The voting the page moves to by itself, or null to stay. The page stays while the delegate
+// holds a vote on the screen (checking it, sending it, or reading why it was not counted),
+// and on an open voting in which the delegate did not vote yet.
+export function autoSwitchTarget (votings, votedIds, current, holding) {
+  if (holding) return null
+
+  const pick = pickVoting(votings, votedIds)
+  if (pick === null || (current && pick === current.id)) return null
+  if (current && current.status === 'open' && !votedIds.includes(current.id)) return null
+  return pick
 }
