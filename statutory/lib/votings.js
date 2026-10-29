@@ -2,6 +2,7 @@ const lodash = require('lodash');
 
 const errors = require('./errors');
 const helpers = require('./helpers');
+const logger = require('./logger');
 const middlewares = require('./middlewares');
 const rules = require('./voting_rules');
 const lifecycle = require('./voting_lifecycle');
@@ -111,7 +112,14 @@ exports.listVotings = async (req, res) => {
 
     const votings = [];
     for (const voting of found) {
-        votings.push(await lifecycle.syncVoting(voting));
+        // A voting that cannot move on now (a Pre-Agora voting while core is down) is listed
+        // in its stored status, so it does not break the list of the other votings.
+        try {
+            votings.push(await lifecycle.syncVoting(voting));
+        } catch (err) {
+            logger.error({ err, voting: voting.id }, 'Listing votings: could not move on the voting.');
+            votings.push(voting);
+        }
     }
 
     return res.json({

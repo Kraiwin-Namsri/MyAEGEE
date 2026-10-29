@@ -49,6 +49,7 @@ The trigger checks the same on every vote and refuses a delegate whose applicati
 - **Quorum**: at opening, the voting asks core (with the service login of `config.core.user`) for the number of active Antennae and stores `antennae_total` and `quorum_required` (half, rounded up).
 At closing it stores `antennae_voted` (Antennae that cast at least one vote) and `quorum_reached`.
 If core cannot be reached at opening, the voting stays scheduled and the next request or server start opens it.
+Until then, `GET .../:voting_id` for that voting gives an error, and the list of votings shows it as scheduled.
 - **Publishing and outcome**: at closing, the result is published at once (`published_by` is null), and `outcome` says what it means for the Agora.
 `decided`: accepted with quorum, binding.
 `to_agora`: the Agora votes again, with `outcome_reason` `no_quorum`, `rejected`, `statutes` (the JC set `concerns_statutes`) or `amendment` (the JC marked with `PUT .../amendment` that an amendment came in at least five days before the Agora).

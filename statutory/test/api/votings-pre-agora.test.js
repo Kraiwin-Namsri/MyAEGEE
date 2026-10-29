@@ -188,6 +188,22 @@ describe('Votings: Pre-Agora Voting', () => {
             expect(opened.body.data.antennae_total).toEqual(1);
         });
 
+        test('should list the votings when core cannot be reached, with the Pre-Agora voting still scheduled', async () => {
+            await generator.createUpcomingDelegate({ user_id: 10, body_id: 34 }, event);
+            const preAgora = await generator.createVoting({ phase: 'pre_agora', opens_at: moment().add(300, 'ms').toDate() }, event);
+            const onAgora = await generator.createOpenVoting({ phase: 'agora' }, event);
+            cron.clearAll();
+            await new Promise((resolve) => { setTimeout(resolve, 500); });
+            mock.mockAll({ core: { userFromToken: true }, bodies: { netError: true } });
+
+            const res = await call('GET', '/events/' + event.id + '/votings');
+
+            expect(res.statusCode).toEqual(200);
+            const statuses = Object.fromEntries(res.body.data.map((voting) => [voting.id, voting.status]));
+            expect(statuses).toEqual({ [preAgora.id]: 'scheduled', [onAgora.id]: 'open' });
+            expect((await Voting.findByPk(preAgora.id)).status).toEqual('scheduled');
+        });
+
         test('should start the server when core cannot be reached, and open the Pre-Agora voting later', async () => {
             const preAgora = await generator.createVoting({ phase: 'pre_agora', opens_at: moment().add(300, 'ms').toDate() }, event);
             const onAgora = await generator.createVoting({ phase: 'agora', opens_at: moment().add(300, 'ms').toDate() }, event);
