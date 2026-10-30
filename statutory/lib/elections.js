@@ -84,8 +84,9 @@ const findBallot = (votingId, transaction) => VotingOption.findAll({
 });
 
 // Why a scheduled election cannot open now, or null if it can: the position was deleted, the ballot
-// is empty, or a candidature on the ballot is not approved any more (it can change at any time,
-// see setCandidatureStatus in lib/candidates.js). The JC then fixes the ballot or deletes the election.
+// is empty, a candidature on the ballot is not approved any more (it can change at any time,
+// see setCandidatureStatus in lib/candidates.js), or its time window has passed (it would open and
+// close at once, without ballots). The JC then fixes the election or deletes it.
 exports.ballotProblem = async (voting, transaction) => {
     const position = await Position.findByPk(voting.position_id, { transaction });
     if (!position || position.deleted) {
@@ -105,6 +106,10 @@ exports.ballotProblem = async (voting, transaction) => {
     const notApproved = ballot.find((option) => option.candidate.status !== 'approved');
     if (notApproved) {
         return `The candidature of ${candidateLabel(notApproved.candidate)} is not approved any more.`;
+    }
+
+    if (new Date(voting.closes_at).getTime() <= Date.now()) {
+        return 'The time window of this election has passed: set a new opens_at and closes_at in the future.';
     }
 
     return null;

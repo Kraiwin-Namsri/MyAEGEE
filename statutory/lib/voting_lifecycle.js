@@ -169,8 +169,8 @@ const openIfDue = async (votingId, antennaeTotal) => sequelize.transaction(async
         quorum.quorum_required = rules.quorumRequired(antennaeTotal);
     }
 
-    // An election opens only with a valid ballot. If it is not valid, the election stays scheduled,
-    // the JC sees why (ballot_problem) and can fix the ballot; the next sync tries again.
+    // An election opens only with a valid ballot and while its time window is still running. If not,
+    // the election stays scheduled, the JC sees why (ballot_problem) and can fix it; the next sync tries again.
     if (voting.kind === 'election') {
         const problem = await elections.ballotProblem(voting, transaction);
         if (problem) {
@@ -242,7 +242,8 @@ const closeIfDue = async (votingId) => sequelize.transaction(async (transaction)
 
 // Moves the voting on to the status that its time window asks for, and returns it fresh.
 // Does nothing (and no query) when the voting is already in the right status.
-// A voting whose whole window passed while nothing ran is opened and closed at once.
+// A voting whose whole window passed while nothing ran is opened and closed at once;
+// an election then stays scheduled (see openIfDue).
 exports.syncVoting = async (voting) => {
     const opening = voting.status === 'scheduled' && isDue(voting.opens_at);
     const closing = voting.status !== 'closed' && isDue(voting.closes_at);

@@ -251,13 +251,71 @@ describe('Votings: elections', () => {
             expect((await myVote('GET', election.voting, 10)).statusCode).toEqual(404);
 
             const fixed = await call('PUT', '/' + election.voting.id, {
-                candidates: [election.candidates[0].id, election.candidates[2].id]
+                candidates: [election.candidates[0].id, election.candidates[2].id],
+                opens_at: moment().add(1, 'hour').toISOString(),
+                closes_at: moment().add(2, 'hours').toISOString()
             });
             expect(fixed.statusCode).toEqual(200);
+            expect(fixed.body.data.status).toEqual('scheduled');
+            expect(fixed.body.data.ballot_problem).toEqual(null);
+            expect(fixed.body.data.options.map((option) => option.candidate_id)).toEqual([election.candidates[0].id, election.candidates[2].id]);
+        });
+
+        test('should not open after its time window passed, and ask the JC for a new time window when fixing the ballot', async () => {
+            const election = await generator.createElection({
+                opens_at: new Date(Date.now() - 3600 * 1000),
+                closes_at: new Date(Date.now() - 1800 * 1000)
+            }, event);
+            await election.candidates[1].update({ status: 'rejected' });
+
+            const blocked = await call('GET', '/' + election.voting.id);
+            expect(blocked.body.data.status).toEqual('scheduled');
+            expect(blocked.body.data.ballot_problem).toEqual('The candidature of Candidate B is not approved any more.');
+
+            const withoutTimes = await call('PUT', '/' + election.voting.id, {
+                candidates: [election.candidates[0].id, election.candidates[2].id]
+            });
+            expect(withoutTimes.statusCode).toEqual(422);
+            expect(withoutTimes.body.message).toEqual('This election did not open on time: set a new opens_at and closes_at in the future.');
+
+            const unchanged = await call('GET', '/' + election.voting.id);
+            expect(unchanged.body.data.status).toEqual('scheduled');
+            expect(unchanged.body.data.options.map((option) => option.candidate_id)).toEqual(election.candidates.map((candidate) => candidate.id));
+            expect(await VotingDelegateVote.count({ where: { voting_id: election.voting.id } })).toEqual(0);
+
+            const opensAt = new Date(Date.now() + 1000);
+            const fixed = await call('PUT', '/' + election.voting.id, {
+                candidates: [election.candidates[0].id, election.candidates[2].id],
+                opens_at: opensAt.toISOString(),
+                closes_at: new Date(Date.now() + 3600 * 1000).toISOString()
+            });
+            expect(fixed.statusCode).toEqual(200);
+            expect(fixed.body.data.status).toEqual('scheduled');
+            expect(fixed.body.data.ballot_problem).toEqual(null);
+
+            await new Promise((resolve) => { setTimeout(resolve, opensAt.getTime() - Date.now() + 100); });
 
             const opened = await call('GET', '/' + election.voting.id);
             expect(opened.body.data.status).toEqual('open');
-            expect(opened.body.data.ballot_problem).toEqual(null);
+            expect(opened.body.data.closed_at).toEqual(null);
+            expect(opened.body.data.options.map((option) => option.outcome)).toEqual([null, null]);
+            expect(await VotingDelegateVote.count({ where: { voting_id: election.voting.id } })).toEqual(3);
+        });
+
+        test('should not open after its time window passed, also with a valid ballot', async () => {
+            const election = await generator.createElection({
+                opens_at: new Date(Date.now() - 3600 * 1000),
+                closes_at: new Date(Date.now() - 1800 * 1000)
+            }, event);
+
+            const res = await call('GET', '/' + election.voting.id);
+
+            expect(res.body.data.status).toEqual('scheduled');
+            expect(res.body.data.ballot_problem).toEqual('The time window of this election has passed: set a new opens_at and closes_at in the future.');
+            expect(await VotingDelegateVote.count({ where: { voting_id: election.voting.id } })).toEqual(0);
+
+            const deleted = await call('DELETE', '/' + election.voting.id);
+            expect(deleted.statusCode).toEqual(200);
         });
 
         test('should not open when the position was deleted', async () => {

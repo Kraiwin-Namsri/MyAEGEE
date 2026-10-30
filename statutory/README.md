@@ -75,6 +75,8 @@ Only approved candidatures of a position of the same Agora can be on the ballot.
 `PUT .../:voting_id` with `candidates` or another `position_id` replaces the ballot; an election cannot become another kind of voting, or the other way round.
 - **Opening**: at `opens_at` the election opens only if its ballot is still valid: the position is not deleted and every candidature on the ballot is still approved.
 If not, the election stays scheduled, `GET .../:voting_id` shows the JC why (`ballot_problem`), and the JC can still edit or delete it after `opens_at`.
+An election whose `closes_at` has passed does not open either, because it would close at once without ballots (unlike other votings, which then open and close at once); `ballot_problem` also tells this.
+To edit an election that did not open on time, the JC must give a new time window: after the edit, `opens_at` and `closes_at` must both be in the future, or the edit is refused (422) and nothing changes.
 At opening, the names of the candidatures are copied to the ballot (`label`), and from then on the ballot is fixed.
 - **Voting**: each vote is one ballot (Working Format of the Agora, Art. 11(3)).
 A delegate sends all ballots at once with `PUT .../my-vote` and `{ "ballots": [[option_id, ...], [], ...] }`: one list per ballot, with the IDs of the options from `GET .../my-vote`, at most `seats` per ballot and each candidate at most once.

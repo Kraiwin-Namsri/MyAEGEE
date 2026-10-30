@@ -63,6 +63,9 @@ const presentVoting = async (voting, canManage) => {
 
 const KIND_CHANGE_MESSAGE = 'An election cannot become another kind of voting, or the other way round: delete it and create a new one.';
 const POSITION_MESSAGE = 'The position should be a position of this Agora.';
+const LATE_ELECTION_MESSAGE = 'This election did not open on time: set a new opens_at and closes_at in the future.';
+
+const isInFuture = (time) => new Date(time).getTime() > Date.now();
 
 // A Pre-Agora voting always has a two-thirds majority (Art. 20(3)), so the JC does not have to give it.
 // currentPhase is the phase of the voting before this change.
@@ -215,7 +218,17 @@ exports.createVoting = async (req, res) => {
 // ballot, and its places as seats, unless the JC gives them; new candidates replace the ballot.
 // The old ballot goes before the position changes, and the new one comes after it, because the
 // database only accepts candidates of the position of the election (candidate_of_position).
+// An election that did not open on time needs a new time window in the future, so that it does not
+// open and close at once, without ballots.
 const editElection = async (election, fields, candidateIds, eventId, transaction) => {
+    if (!isInFuture(election.opens_at)) {
+        const opensAt = helpers.isDefined(fields.opens_at) ? fields.opens_at : election.opens_at;
+        const closesAt = helpers.isDefined(fields.closes_at) ? fields.closes_at : election.closes_at;
+        if (!isInFuture(opensAt) || !isInFuture(closesAt)) {
+            return LATE_ELECTION_MESSAGE;
+        }
+    }
+
     const positionId = helpers.isDefined(fields.position_id) ? fields.position_id : election.position_id;
     const newPosition = positionId !== election.position_id;
     if (!newPosition && typeof candidateIds === 'undefined') {
