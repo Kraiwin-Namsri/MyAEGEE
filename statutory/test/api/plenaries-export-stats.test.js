@@ -595,6 +595,43 @@ describe('Plenaries exports', () => {
         expect(rows[1][2]).toEqual('AEGEE-Alicante');
     });
 
+    test('should export the attendance of an envoy on the plenary sheet', async () => {
+        const event = await generator.createEvent({ type: 'agora', applications: [] });
+        const plenary = await generator.createPlenary({
+            name: 'Test plenary',
+            starts: moment().subtract(2, 'week').toDate(),
+            ends: moment().subtract(2, 'week').add(1, 'hour').toDate(),
+        }, event);
+        const envoy = await generator.createApplication({
+            participant_type: 'envoy', participant_order: 1, user_id: regularUser.id, body_id: regularUser.bodies[0].id
+        }, event);
+
+        await generator.createAttendance({
+            application_id: envoy.id,
+            starts: plenary.starts,
+            ends: plenary.ends,
+        }, plenary);
+
+        const res = await request({
+            path: '/events/' + event.id + '/plenaries/stats',
+            method: 'GET',
+            responseType: 'buffer', // make response body to Buffer.
+            headers: { 'X-Auth-Token': 'blablabla' }
+        });
+
+        expect(res.statusCode).toEqual(200);
+
+        const data = xlsx.parse(res.body);
+        const attendanceRow = data[2].data.find((r) => r[0] === envoy.id);
+        expect(attendanceRow).toBeTruthy();
+        expect(attendanceRow[6]).toEqual('100.00%');
+
+        // An envoy is not a delegate, so the Local is not represented by the envoy.
+        const bodyRow = data[1].data.find((r) => r[2] === regularUser.bodies[0].name);
+        expect(bodyRow[4]).toEqual(0);
+        expect(bodyRow[5]).toEqual('0.00%');
+    });
+
     test('should not display non A/CAs on bodies stats', async () => {
         const event = await generator.createEvent({ type: 'agora', applications: [] });
 

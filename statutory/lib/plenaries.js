@@ -102,8 +102,8 @@ exports.findPlenaryWithAttendances = async (req, res) => {
     });
 };
 
-// The plenaries of the event with their attendances, and the delegates who can have attended them.
-const loadPlenariesWithDelegates = async (event) => {
+// The plenaries of the event with their attendances, and the delegates and envoys who can have attended them.
+const loadPlenariesWithAttendees = async (event) => {
     const plenaries = await Plenary.findAll({
         where: { event_id: event.id },
         order: [
@@ -116,7 +116,7 @@ const loadPlenariesWithDelegates = async (event) => {
     const applications = await Application.findAll({
         where: {
             event_id: event.id,
-            participant_type: 'delegate'
+            participant_type: ['delegate', 'envoy']
         },
         order: [['id', 'ASC']],
         attributes: constants.ALLOWED_PLENARY_ATTENDANCE_FIELDS
@@ -130,7 +130,7 @@ exports.listLocalAttendance = async (req, res) => {
         return errors.makeForbiddenError(res, 'You cannot see stats.');
     }
 
-    const { plenaries, applications } = await loadPlenariesWithDelegates(req.event);
+    const { plenaries, applications } = await loadPlenariesWithAttendees(req.event);
     const bodies = await core.getBodies(req);
 
     return res.json({
@@ -144,7 +144,7 @@ exports.listPlenariesStats = async (req, res) => {
         return errors.makeForbiddenError(res, 'You cannot see stats.');
     }
 
-    const { plenaries, applications } = await loadPlenariesWithDelegates(req.event);
+    const { plenaries, applications } = await loadPlenariesWithAttendees(req.event);
     const bodies = await core.getBodies(req);
 
     // First sheet with general status with all the info.
@@ -252,12 +252,16 @@ exports.listPlenariesStats = async (req, res) => {
                     'Time in seconds',
                     'Time in percent'
                 ],
-                // attendances data
-                ...plenary.attendances.map((attendance) => {
-                    const attendanceDuration = helpers.calculateTimeForPlenary(attendance, plenary);
+                // attendances data, without the attendances of an applicant who is no delegate or envoy anymore
+                ...plenary.attendances.flatMap((attendance) => {
                     const application = applications.find((a) => a.id === attendance.application_id);
+                    if (!application) {
+                        return [];
+                    }
 
-                    return [
+                    const attendanceDuration = helpers.calculateTimeForPlenary(attendance, plenary);
+
+                    return [[
                         application.id,
                         application.first_name + ' ' + application.last_name,
                         application.body_name,
@@ -265,7 +269,7 @@ exports.listPlenariesStats = async (req, res) => {
                         helpers.beautify(attendance.ends),
                         attendanceDuration.toFixed(2),
                         ((attendanceDuration / plenary.duration) * 100).toFixed(2) + '%'
-                    ];
+                    ]];
                 })
             ]
         };
