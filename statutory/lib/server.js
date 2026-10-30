@@ -181,8 +181,8 @@ PlenariesRouter.get('/:plenary_id', plenaries.findPlenaryWithAttendances);
 PlenariesRouter.post('/:plenary_id/attendance/mark', plenaries.findPlenary, plenaries.markPlenaryAttendance);
 
 // The vote route of a delegate only asks core who the user is (no permissions, no fetchEvent),
-// because all delegates of the Agora use it at the same moment.
-MyVoteRouter.use(middlewares.authenticateMember, votings.findVotingForMember);
+// because all delegates of the Agora use it at the same moment. It is logged without the user and the body.
+MyVoteRouter.use(votings.keepVoteOutOfLog, middlewares.authenticateMember, votings.findVotingForMember);
 MyVoteRouter.get('/', votings.getMyVote);
 MyVoteRouter.put('/', votings.submitMyVote);
 
