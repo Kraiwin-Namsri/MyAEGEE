@@ -73,7 +73,7 @@ Its ballot (`voting_options`) lists the candidates of that one moment; a second 
 Without `candidates`, the ballot gets all approved candidatures of the position, by last name; with `candidates` (a list of candidate IDs), those candidatures in that order.
 Only approved candidatures of a position of the same Agora can be on the ballot.
 `PUT .../:voting_id` with `candidates` or another `position_id` replaces the ballot; an election cannot become another kind of voting, or the other way round.
-- **Opening**: at `opens_at` the election opens only if its ballot is still valid: the position is not deleted and every candidature on the ballot is still approved.
+- **Opening**: at `opens_at` the election opens only if its ballot is still valid: the position is not deleted, the ballot has at least one candidate, and every candidature on the ballot is still approved.
 If not, the election stays scheduled, `GET .../:voting_id` shows the JC why (`ballot_problem`), and the JC can still edit or delete it after `opens_at`.
 An election whose `closes_at` has passed does not open either, because it would close at once without ballots (unlike other votings, which then open and close at once); `ballot_problem` also tells this.
 To edit an election that did not open on time, the JC must give a new time window: after the edit, `opens_at` and `closes_at` must both be in the future, or the edit is refused (422) and nothing changes.
