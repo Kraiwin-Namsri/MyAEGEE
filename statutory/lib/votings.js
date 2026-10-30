@@ -68,10 +68,12 @@ const LATE_ELECTION_MESSAGE = 'This election did not open on time: set a new ope
 const isInFuture = (time) => new Date(time).getTime() > Date.now();
 
 // A Pre-Agora voting always has a two-thirds majority (Art. 20(3)), so the JC does not have to give it.
-// currentPhase is the phase of the voting before this change.
-const withPreAgoraMajority = (fields, currentPhase) => {
+// An election has no majority and cannot be in Pre-Agora Voting, so it gets none.
+// currentPhase and currentKind are the phase and the kind of the voting before this change.
+const withPreAgoraMajority = (fields, currentPhase, currentKind) => {
     const phase = helpers.isDefined(fields.phase) ? fields.phase : currentPhase;
-    if (phase === 'pre_agora' && !helpers.isDefined(fields.majority)) {
+    const kind = helpers.isDefined(fields.kind) ? fields.kind : currentKind;
+    if (phase === 'pre_agora' && kind !== 'election' && !helpers.isDefined(fields.majority)) {
         return { ...fields, majority: 'two_thirds' };
     }
     return fields;
@@ -190,7 +192,7 @@ exports.createVoting = async (req, res) => {
         return errors.makeForbiddenError(res, 'You cannot manage votings.');
     }
 
-    let fields = withPreAgoraMajority(lodash.pick(req.body, EDITABLE_FIELDS), 'agora');
+    let fields = withPreAgoraMajority(lodash.pick(req.body, EDITABLE_FIELDS), 'agora', null);
     let candidates = [];
     if (fields.kind === 'election') {
         const prepared = await prepareElection(req.event.id, fields, req.body.candidates);
@@ -264,7 +266,7 @@ exports.editVoting = async (req, res) => {
             return { conflict: 'Only a voting that did not open yet can be edited.' };
         }
 
-        const fields = withPreAgoraMajority(lodash.pick(req.body, EDITABLE_FIELDS), locked.phase);
+        const fields = withPreAgoraMajority(lodash.pick(req.body, EDITABLE_FIELDS), locked.phase, locked.kind);
         const kind = helpers.isDefined(fields.kind) ? fields.kind : locked.kind;
         if ((kind === 'election') !== (locked.kind === 'election')) {
             return { error: KIND_CHANGE_MESSAGE };

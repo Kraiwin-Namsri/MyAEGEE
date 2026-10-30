@@ -22,9 +22,10 @@ const rules = require('../lib/voting_rules');
 const isSet = (val) => val !== null && typeof val !== 'undefined';
 
 // A Pre-Agora voting must fit in days 14 to 9 before the Agora starts.
-// Returns the window, or null when the voting is not a Pre-Agora voting.
+// Returns the window, or null when the voting is not a Pre-Agora voting. An election never is one
+// (validator electionsOnTheAgora), so it gets no window either.
 async function preAgoraWindowOf(voting) {
-    if (voting.phase !== 'pre_agora') {
+    if (voting.phase !== 'pre_agora' || voting.kind === 'election') {
         return null;
     }
 
@@ -86,7 +87,7 @@ const Voting = sequelize.define('voting', {
             },
             // Art. 20(3): "All decisions are to be taken by a qualified majority."
             twoThirdsBeforeTheAgora(val) {
-                if (this.phase === 'pre_agora' && val !== 'two_thirds') {
+                if (this.phase === 'pre_agora' && this.kind !== 'election' && val !== 'two_thirds') {
                     throw new Error('A Pre-Agora voting needs a two-thirds majority.');
                 }
             }

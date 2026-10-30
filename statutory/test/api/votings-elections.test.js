@@ -139,6 +139,8 @@ describe('Votings: elections', () => {
 
             expect(res.statusCode).toEqual(422);
             expect(res.body.errors).toHaveProperty(field);
+            // Only the field that is wrong: Pre-Agora Voting does not add a majority to an election.
+            expect(Object.keys(res.body.errors)).toEqual([field]);
         });
 
         test('should refuse a proposal with the fields of an election', async () => {
@@ -283,17 +285,19 @@ describe('Votings: elections', () => {
             expect(unchanged.body.data.options.map((option) => option.candidate_id)).toEqual(election.candidates.map((candidate) => candidate.id));
             expect(await VotingDelegateVote.count({ where: { voting_id: election.voting.id } })).toEqual(0);
 
-            const opensAt = new Date(Date.now() + 1000);
             const fixed = await call('PUT', '/' + election.voting.id, {
                 candidates: [election.candidates[0].id, election.candidates[2].id],
-                opens_at: opensAt.toISOString(),
-                closes_at: new Date(Date.now() + 3600 * 1000).toISOString()
+                opens_at: moment().add(1, 'hour').toISOString(),
+                closes_at: moment().add(2, 'hours').toISOString()
             });
             expect(fixed.statusCode).toEqual(200);
             expect(fixed.body.data.status).toEqual('scheduled');
             expect(fixed.body.data.ballot_problem).toEqual(null);
 
-            await new Promise((resolve) => { setTimeout(resolve, opensAt.getTime() - Date.now() + 100); });
+            // The new opens_at comes: moved into the past directly, so the test does not wait for it.
+            await VotingDelegateVote.sequelize.query("UPDATE votings SET opens_at = now() - interval '1 second' WHERE id = :id", {
+                replacements: { id: election.voting.id }
+            });
 
             const opened = await call('GET', '/' + election.voting.id);
             expect(opened.body.data.status).toEqual('open');
