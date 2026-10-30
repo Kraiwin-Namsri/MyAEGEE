@@ -100,7 +100,7 @@ The database enforces the ballot box, not only the application:
 
 - `ballots_match_votes`: at commit, the ballot box of an election holds exactly as many ballots as its delegates counted, so a ballot cannot come in without a delegate who casts it, or the other way round.
 - `ballots_are_final`: a ballot or a mark cannot change or go away; `voting_not_open`: ballots only come in while the election is open.
-- `one_mark_per_candidate`, `marks_within_seats`, `mark_for_candidate_of_voting`: each candidate at most once per ballot, at most `seats` marks, and only candidates of the same election.
+- `one_mark_per_candidate`, `marks_within_seats`, `mark_on_ballot_of_voting`, `mark_for_candidate_of_voting`: each candidate at most once per ballot, at most `seats` marks, and only on a ballot and for candidates of the same election.
 - `vote_form_matches_kind`: an election counts ballots on the row of the delegate, other votings count in favour, against and abstention; `delegate_vote_limit` counts the ballots too.
 - `ballot_is_fixed`, `candidate_of_position`, `options_only_for_elections`, `election_fields`, `election_has_no_result`: the ballot is fixed once the election opened, holds candidates of the position of the election only, and only an election has a position, seats and an election rule.
 
