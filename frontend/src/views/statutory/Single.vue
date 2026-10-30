@@ -3,6 +3,7 @@
     <div class="tile is-vertical is-3">
       <div class="tile is-parent is-vertical statutory-event-logo">
         <article class="tile is-child is-primary">
+          <p class="title is-hidden-tablet statutory-event-name">{{ event.name }}</p>
           <figure class="image">
             <img v-if="!event.image" src="/images/logo.png" />
             <img
@@ -58,7 +59,7 @@
     <div class="tile is-vertical is-parent">
       <article class="tile is-child">
         <div class="content">
-          <p class="title">{{ event.name }}</p>
+          <p class="title is-hidden-mobile">{{ event.name }}</p>
 
           <div class="notification is-warning" v-if="activeEventApplicationBan">
             You are temporarily banned from submitting new event applications until {{ loginUser.event_application_ban.ban_until | datetime }}.
