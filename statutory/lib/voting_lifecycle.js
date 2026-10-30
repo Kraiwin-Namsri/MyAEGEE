@@ -245,6 +245,12 @@ const closeIfDue = async (votingId) => sequelize.transaction(async (transaction)
 // A voting whose whole window passed while nothing ran is opened and closed at once;
 // an election then stays scheduled (see openIfDue).
 exports.syncVoting = async (voting) => {
+    // An election that did not open in its time window stays scheduled until the JC sets a new window
+    // (see openIfDue), so reading it does not try to open it again.
+    if (voting.kind === 'election' && voting.status === 'scheduled' && isDue(voting.closes_at)) {
+        return voting;
+    }
+
     const opening = voting.status === 'scheduled' && isDue(voting.opens_at);
     const closing = voting.status !== 'closed' && isDue(voting.closes_at);
     if (!opening && !closing) {

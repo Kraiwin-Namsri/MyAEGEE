@@ -478,14 +478,6 @@ exports.getResult = async (req, res) => {
     });
 };
 
-// The vote route is logged without the user and without the request body (see lib/morgan.js),
-// so the log never tells who voted what: in an election the vote is secret (Statutes, Art. 14(12)),
-// and in a proposal the vote is public only once the result is.
-exports.keepVoteOutOfLog = (req, res, next) => {
-    req.keepOutOfLog = true;
-    return next();
-};
-
 // The vote route does not use fetchEvent: it only needs the voting and the row of the
 // delegate in the snapshot, so it asks core only who the user is (see middlewares.authenticateMember).
 exports.findVotingForMember = async (req, res, next) => {

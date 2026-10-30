@@ -87,7 +87,7 @@ A ballot (`voting_ballots`, with its marks in `voting_ballot_marks`) has no pers
 The row of the delegate only counts the ballots (`voting_delegate_votes.ballots_cast`).
 At closing, the trigger `shuffle_ballot_box` writes all ballots again in random order, so that neither the physical order of the table (as in a backup) nor the transaction ID of a ballot tells which delegate cast it.
 While the election is open, someone who can read the database can still link the ballots to the delegates; make no backup of an open election.
-The vote route is logged without the user and without the request body (`lib/morgan.js`), and the queries of the ballot box are not logged (`lib/ballot_box.js`).
+Statutory logs a request without its body and with only the ID of the user (`lib/morgan.js`), and the ballot box does not log its queries or the details of a database error (`lib/ballot_box.js`), so the log never holds what is on a ballot.
 - **Count and outcome**: at closing the system counts, per candidate, the ballots that mark the candidate, and gives each candidate an `outcome`: `elected`, `not_elected`, or `tie` for the last seat.
 The votes cast are all ballots, blank ones included; the possible votes are all votes of the bodies in the snapshot (`votes_total`).
 The rules (`rules.reachesThreshold` in `lib/voting_rules.js`): `absolute_majority`, more than half of the votes cast (Statutes, Art. 17(2), Comite Directeur); `half_of_votes_cast`, at least half of the votes cast (Working Format of the Agora, Art. 12(1), Chair Team); `commission`, the three cases of Art. 14(1) by the number of candidates.

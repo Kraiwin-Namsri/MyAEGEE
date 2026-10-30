@@ -312,11 +312,16 @@ describe('Votings: elections', () => {
                 closes_at: new Date(Date.now() - 1800 * 1000)
             }, event);
 
+            const warn = jest.spyOn(logger, 'warn');
+
             const res = await call('GET', '/' + election.voting.id);
+            await call('GET', '');
 
             expect(res.body.data.status).toEqual('scheduled');
             expect(res.body.data.ballot_problem).toEqual('The time window of this election has passed: set a new opens_at and closes_at in the future.');
             expect(await VotingDelegateVote.count({ where: { voting_id: election.voting.id } })).toEqual(0);
+            // Reading it does not try to open it again: no attempt, so no warning in the log.
+            expect(warn.mock.calls.filter(([fields]) => fields && fields.voting === election.voting.id)).toEqual([]);
 
             const deleted = await call('DELETE', '/' + election.voting.id);
             expect(deleted.statusCode).toEqual(200);
@@ -440,9 +445,9 @@ describe('Votings: elections', () => {
             expect(row.submitted_at).toEqual(null);
         });
 
-        // The log of statutory keeps the user and the body of every request. For the vote route
-        // it keeps neither, so the log never tells who cast which vote.
-        test('should log the vote route without the user and without the ballots', async () => {
+        // Statutory logs a request with only the ID of the user and without the body (lib/morgan.js),
+        // and the ballot box does not log its queries, so the log never holds what a delegate voted.
+        test('should log the vote route without the ballots and without the name of the delegate', async () => {
             const election = await openElection();
             const [A, B] = election.ballot.map((option) => option.id);
             const info = jest.spyOn(logger, 'info');
@@ -454,7 +459,7 @@ describe('Votings: elections', () => {
             const lines = info.mock.calls.filter(([fields]) => fields && typeof fields.url === 'string' && fields.url.includes('/my-vote'));
             expect(lines.map(([fields]) => fields.method)).toEqual(['PUT', 'GET']);
             for (const [fields] of lines) {
-                expect(fields.user).toEqual(undefined);
+                expect(Object.keys(fields.user)).toEqual(['id']);
                 expect(fields.body).toEqual(undefined);
                 expect(JSON.stringify(fields)).not.toContain('"ballots"');
             }
