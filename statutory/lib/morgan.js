@@ -11,6 +11,6 @@ module.exports = morgan((tokens, req, res) => {
         status: tokens.status(req, res),
         length: tokens.res(req, res, 'content-length'),
         'response-time': tokens['response-time'](req, res),
-        user: req.user ? req.user.id : undefined
+        user: req.user ? { id: req.user.id } : undefined
     }, 'Request processed');
 });

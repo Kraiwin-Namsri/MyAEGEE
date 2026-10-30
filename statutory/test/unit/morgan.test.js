@@ -37,7 +37,7 @@ describe('Request logging', () => {
         const [entry, message] = log.info.mock.calls[0];
 
         expect(message).toBe('Request processed');
-        expect(entry).toMatchObject({ method: 'POST', url: '/votings?page=1', status: '200', length: 2, user: 42 });
+        expect(entry).toMatchObject({ method: 'POST', url: '/votings?page=1', status: '200', length: 2, user: { id: 42 } });
         expect(entry['response-time']).toEqual(expect.any(String));
 
         const output = JSON.stringify(log.info.mock.calls);
