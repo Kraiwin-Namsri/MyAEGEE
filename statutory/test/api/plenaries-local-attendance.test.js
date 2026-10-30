@@ -32,10 +32,11 @@ describe('Plenaries attendance per Local', () => {
         headers: { 'X-Auth-Token': 'blablabla' }
     });
 
+    // A plenary of one hour that is over: week 1 is 9 weeks ago, week 2 is 8 weeks ago, and so on.
     const createHourPlenary = (event, name, week) => generator.createPlenary({
         name,
-        starts: moment().add(week, 'week').toDate(),
-        ends: moment().add(week, 'week').add(1, 'hour').toDate()
+        starts: moment().subtract(10 - week, 'week').toDate(),
+        ends: moment().subtract(10 - week, 'week').add(1, 'hour').toDate()
     }, event);
 
     test('should return 403 if no permissions', async () => {
@@ -97,7 +98,7 @@ describe('Plenaries attendance per Local', () => {
         expect(local.below_threshold).toEqual(false);
     });
 
-    test('should count overlapping visits of delegates once and ignore open visits', async () => {
+    test('should count overlapping visits of delegates once and an open visit until the end of the plenary', async () => {
         const event = await generator.createEvent({ type: 'agora', applications: [] });
         const plenary = await createHourPlenary(event, 'Test plenary', 1);
 
@@ -108,7 +109,7 @@ describe('Plenaries attendance per Local', () => {
             participant_type: 'delegate', participant_order: 2, user_id: 1337, body_id: bodyId
         }, event);
 
-        // Minutes 0-30 and 20-40 together cover 40 minutes, the open visit from minute 50 counts for nothing.
+        // Minutes 0-30 and 20-40 together cover 40 minutes, the open visit from minute 50 adds the last 10 minutes.
         await generator.createAttendance({
             application_id: first.id,
             starts: plenary.starts,
@@ -128,9 +129,31 @@ describe('Plenaries attendance per Local', () => {
         const res = await getAttendance(event);
 
         const [local] = res.body.data.locals;
-        expect(local.plenaries[0].seconds).toEqual(2400);
-        expect(local.average_percent).toBeCloseTo(66.6667, 3);
-        expect(local.below_threshold).toEqual(true);
+        expect(local.plenaries[0].seconds).toEqual(3000);
+        expect(local.average_percent).toBeCloseTo(83.3333, 3);
+        expect(local.below_threshold).toEqual(false);
+    });
+
+    test('should not judge a plenary that did not start yet', async () => {
+        const event = await generator.createEvent({ type: 'agora', applications: [] });
+        const past = await createHourPlenary(event, 'Past', 1);
+        await generator.createPlenary({
+            name: 'Future',
+            starts: moment().add(1, 'week').toDate(),
+            ends: moment().add(1, 'week').add(1, 'hour').toDate()
+        }, event);
+
+        const delegate = await generator.createApplication({
+            participant_type: 'delegate', participant_order: 1, user_id: regularUser.id, body_id: bodyId
+        }, event);
+        await generator.createAttendance({ application_id: delegate.id, starts: past.starts, ends: past.ends }, past);
+
+        const res = await getAttendance(event);
+
+        const [local] = res.body.data.locals;
+        expect(local.plenaries).toEqual([{ plenary_id: past.id, seconds: 3600, percent: 100 }]);
+        expect(local.average_percent).toEqual(100);
+        expect(local.below_threshold).toEqual(false);
     });
 
     test('should average the plenaries with the same weight each', async () => {

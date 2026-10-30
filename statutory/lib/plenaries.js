@@ -135,7 +135,7 @@ exports.listLocalAttendance = async (req, res) => {
 
     return res.json({
         success: true,
-        data: calculateLocalAttendance({ plenaries, applications, bodies })
+        data: calculateLocalAttendance({ plenaries, applications, bodies, now: new Date() })
     });
 };
 
@@ -201,7 +201,7 @@ exports.listPlenariesStats = async (req, res) => {
 
     // Second sheet with the Antennae and their stats. A Local is represented in a moment
     // when at least one of its delegates is in the hall (General Rules, art. 6(1)(d)).
-    const localAttendance = calculateLocalAttendance({ plenaries, applications, bodies });
+    const localAttendance = calculateLocalAttendance({ plenaries, applications, bodies, now: new Date() });
     const bodiesSheet = {
         name: 'Stats (bodies)',
         data: [
@@ -225,7 +225,10 @@ exports.listPlenariesStats = async (req, res) => {
                 local.delegates,
                 local.average_percent.toFixed(2) + '%',
                 local.below_threshold ? 'Yes' : 'No',
-                ...local.plenaries.map((entry) => entry.percent.toFixed(2) + '%')
+                ...plenaries.map((plenary) => {
+                    const entry = local.plenaries.find((e) => e.plenary_id === plenary.id);
+                    return entry ? entry.percent.toFixed(2) + '%' : '';
+                })
             ])
         ]
     };

@@ -113,7 +113,7 @@ export default {
   methods: {
     formatPercent,
     tag (local) {
-      return attendanceTag(local, this.plenaries.length, this.localAttendance.threshold)
+      return attendanceTag(local, this.localAttendance.threshold)
     },
     openEditPlenaryModal (plenary) {
       if (!plenary) {

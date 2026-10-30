@@ -8,8 +8,8 @@ import {
   lowestFirst
 } from '../src/plenaryAttendance.js'
 
-const local = (name, averagePercent, belowThreshold = averagePercent < 80) => ({
-  name, average_percent: averagePercent, below_threshold: belowThreshold
+const local = (name, averagePercent, belowThreshold = averagePercent < 80, plenaries = [{ plenary_id: 1 }]) => ({
+  name, average_percent: averagePercent, below_threshold: belowThreshold, plenaries
 })
 
 describe('formatPercent', () => {
@@ -30,15 +30,15 @@ describe('lowestFirst', () => {
 
 describe('attendanceTag', () => {
   it('marks a Local below the threshold', () => {
-    assert.deepEqual(attendanceTag(local('A', 79.9), 2, 80), { label: 'Below 80%', type: 'is-danger' })
+    assert.deepEqual(attendanceTag(local('A', 79.9), 80), { label: 'Below 80%', type: 'is-danger' })
   })
 
   it('marks a Local at or above the threshold', () => {
-    assert.deepEqual(attendanceTag(local('A', 80), 2, 80), { label: 'At least 80%', type: 'is-success' })
+    assert.deepEqual(attendanceTag(local('A', 80), 80), { label: 'At least 80%', type: 'is-success' })
   })
 
-  it('gives no mark when there is no plenary to judge', () => {
-    assert.equal(attendanceTag(local('A', 0, false), 0, 80), null)
+  it('gives no mark when no plenary of the Local has started', () => {
+    assert.equal(attendanceTag(local('A', 0, false, []), 80), null)
   })
 })
 
@@ -48,5 +48,6 @@ describe('explainAttendance', () => {
     assert.match(text, /at least 80% of plenary time/)
     assert.match(text, /at least one delegate/)
     assert.match(text, /same weight/)
+    assert.match(text, /plenaries that have started/)
   })
 })
