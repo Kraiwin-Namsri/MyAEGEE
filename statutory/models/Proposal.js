@@ -4,7 +4,7 @@ const { Sequelize, sequelize } = require('../lib/sequelize');
 // the proposers (free text, as in OMS), the part of the CIA it changes and a link to its text and
 // motivation; the text itself stays outside MyAEGEE. The JC puts it on the agenda or does not admit it
 // with a reason (Working Format of the Agora, Art. 8(2)); the proposer can withdraw it.
-// A voting of kind 'proposal' points to it (votings.proposal_id), and the decision of the Agora is a
+// A voting of kind 'proposal' can point to it (votings.proposal_id), and the decision of the Agora is a
 // checked copy of the voting that decided it. The database keeps these rules (trigger proposal_guard),
 // see migrations/20261102120000-add-proposals.js and lib/proposals.js.
 const Proposal = sequelize.define('proposal', {

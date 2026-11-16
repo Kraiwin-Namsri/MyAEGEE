@@ -21,7 +21,7 @@ const {
 // fields change only through the voting lifecycle and the publish route; the quorum and the
 // outcome of a Pre-Agora voting only through the lifecycle and the amendment route.
 // The candidates on the ballot of an election come in the separate field "candidates".
-// A voting of kind 'proposal' points to its proposal with proposal_id.
+// A voting of kind 'proposal' can point to its proposal with proposal_id (optional for now).
 const EDITABLE_FIELDS = [
     'kind',
     'title',

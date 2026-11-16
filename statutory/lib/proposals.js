@@ -14,7 +14,7 @@ const { Proposal } = require('../models');
 // - Every logged-in user sees a proposal that was on the agenda (on_agenda_at), also once it is withdrawn.
 //   A proposal that is submitted, not admitted or withdrawn before it was on the agenda only its proposer
 //   and the JC see. The reason of the JC only its proposer and the JC see.
-// - A voting of kind 'proposal' points to a proposal on the agenda; the decision of the Agora is copied
+// - A voting of kind 'proposal' can point to a proposal on the agenda; the decision of the Agora is copied
 //   to the proposal when the voting that decides it is published (copyDecision).
 // The database keeps the steps (trigger proposal_guard); this module checks who may take them.
 
